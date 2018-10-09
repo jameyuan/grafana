@@ -24,6 +24,7 @@ import IndicatorsContainer from 'app/core/components/Picker/IndicatorsContainer'
 import NoOptionsMessage from 'app/core/components/Picker/NoOptionsMessage';
 import TableModel, { mergeTablesIntoModel } from 'app/core/table_model';
 
+import Start from './PromStart';
 import QueryRows from './QueryRows';
 import Graph from './Graph';
 import Logs from './Logs';
@@ -340,6 +341,13 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
         }
       }
     );
+  };
+
+  // Use this in help pages to set page to a single query
+  onClickQuery = query => {
+    const nextQueries = [{ query, key: generateQueryKey() }];
+    this.queryExpressions = nextQueries.map(q => q.query);
+    this.setState({ queries: nextQueries }, this.onSubmit);
   };
 
   onClickSplit = () => {
@@ -755,6 +763,7 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
       queryTransactions.filter(qt => qt.resultType === 'Logs' && qt.done).map(qt => qt.result)
     );
     const loading = queryTransactions.some(qt => !qt.done);
+    const showStartPages = queryTransactions.length === 0;
 
     return (
       <div className={exploreClass} ref={this.getRef}>
@@ -767,12 +776,12 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
               </a>
             </div>
           ) : (
-            <div className="navbar-buttons explore-first-button">
-              <button className="btn navbar-button" onClick={this.onClickCloseSplit}>
-                Close Split
+              <div className="navbar-buttons explore-first-button">
+                <button className="btn navbar-button" onClick={this.onClickCloseSplit}>
+                  Close Split
               </button>
-            </div>
-          )}
+              </div>
+            )}
           {!datasourceMissing ? (
             <div className="navbar-buttons">
               <Select
@@ -842,25 +851,27 @@ export class Explore extends React.PureComponent<ExploreProps, ExploreState> {
               supportsLogs={supportsLogs}
               transactions={queryTransactions}
             />
-            <div className="result-options">
-              {supportsGraph ? (
-                <button className={`btn toggle-btn ${graphButtonActive}`} onClick={this.onClickGraphButton}>
-                  Graph
-                </button>
-              ) : null}
-              {supportsTable ? (
-                <button className={`btn toggle-btn ${tableButtonActive}`} onClick={this.onClickTableButton}>
-                  Table
-                </button>
-              ) : null}
-              {supportsLogs ? (
-                <button className={`btn toggle-btn ${logsButtonActive}`} onClick={this.onClickLogsButton}>
-                  Logs
-                </button>
-              ) : null}
-            </div>
-
             <main className="m-t-2">
+              {showStartPages && <Start request={this.request} onClickQuery={this.onClickQuery} />}
+
+              <div className="result-options">
+                {supportsGraph ? (
+                  <button className={`btn toggle-btn ${graphButtonActive}`} onClick={this.onClickGraphButton}>
+                    Graph
+                  </button>
+                ) : null}
+                {supportsTable ? (
+                  <button className={`btn toggle-btn ${tableButtonActive}`} onClick={this.onClickTableButton}>
+                    Table
+                  </button>
+                ) : null}
+                {supportsLogs ? (
+                  <button className={`btn toggle-btn ${logsButtonActive}`} onClick={this.onClickLogsButton}>
+                    Logs
+                  </button>
+                ) : null}
+              </div>
+
               {supportsGraph &&
                 showingGraph && (
                   <Graph
