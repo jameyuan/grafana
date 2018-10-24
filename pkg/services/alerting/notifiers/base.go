@@ -2,6 +2,7 @@ package notifiers
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
@@ -26,12 +27,88 @@ type NotifierBase struct {
 	log log.Logger
 }
 
-func NewNotifierBase(model *models.AlertNotification) NotifierBase {
-	uploadImage := true
-	value, exist := model.Settings.CheckGet("uploadImage")
-	if exist {
-		uploadImage = value.MustBool()
+func GetSettingBool(model *models.AlertNotification, key string, args ...bool) (bool, error) {
+	def := false
+	if len(args) == 1 {
+		def = args[0]
 	}
+
+	val, ok := model.Settings.CheckGet(key)
+	if !ok {
+		if len(args) == 1 {
+			return def, nil
+		}
+
+		return def, alerting.ValidationError{Reason: "Could not find " + key + " property in settings"}
+	}
+
+	if b, err := val.Bool(); err == nil {
+		return b, nil
+	}
+
+	if s, err := val.String(); err == nil {
+		return s != "", nil
+	}
+
+	if i, err := val.Int64(); err == nil {
+		return i != 0, nil
+	}
+
+	return def, alerting.ValidationError{Reason: "Invalid " + key + " property in settings"}
+}
+
+func GetSettingString(model *models.AlertNotification, key string, args ...string) (string, error) {
+	def := ""
+	if len(args) == 1 {
+		def = args[0]
+	}
+
+	val, ok := model.Settings.CheckGet(key)
+	if !ok {
+		if len(args) == 1 {
+			return def, nil
+		}
+
+		return def, alerting.ValidationError{Reason: "Could not find " + key + " property in settings"}
+	}
+
+	if s, err := val.String(); err == nil {
+		return s, nil
+	}
+
+	return "", alerting.ValidationError{Reason: "Invalid " + key + " property in settings"}
+}
+
+func GetSettingInt64(model *models.AlertNotification, key string, args ...int64) (int64, error) {
+	def := int64(0)
+	if len(args) == 1 {
+		def = args[0]
+	}
+
+	val, ok := model.Settings.CheckGet(key)
+	if !ok {
+		if len(args) == 1 {
+			return def, nil
+		}
+
+		return def, alerting.ValidationError{Reason: "Could not find " + key + " property in settings"}
+	}
+
+	if i, err := val.Int64(); err == nil {
+		return i, nil
+	}
+
+	if s, err := val.String(); err == nil {
+		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
+			return i, nil
+		}
+	}
+
+	return def, alerting.ValidationError{Reason: "Invalid " + key + " property in settings"}
+}
+
+func NewNotifierBase(model *models.AlertNotification) NotifierBase {
+	uploadImage, _ := GetSettingBool(model, "uploadImage", true)
 
 	return NotifierBase{
 		Id:                    model.Id,
